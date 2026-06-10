@@ -19,7 +19,7 @@ async def seed_database(session: AsyncSession) -> None:
     beans = _beans()
     session.add_all(beans)
     await session.flush()
-    recipes = _recipes(users)
+    recipes = _recipes(users, beans)
     session.add_all(recipes)
     await session.flush()
     notes = _notes(users, recipes)
@@ -69,11 +69,11 @@ def _beans() -> list[CoffeeBean]:
     ]
 
 
-def _recipes(users: list[User]) -> list[BrewRecipe]:
+def _recipes(users: list[User], beans: list[CoffeeBean]) -> list[BrewRecipe]:
     return [
-        BrewRecipe(user_id=users[0].id, name="V60 经典手冲", device="V60", water_temp=92, grind_size="中细（细砂糖）", ratio="1:15", steps=_steps(["称豆15g研磨", "注水30g闷蒸30s", "注水至120g", "注水至225g", "等待滴完"])),
-        BrewRecipe(user_id=users[1].id, name="法压壶浸泡", device="法压壶", water_temp=94, grind_size="粗研磨", ratio="1:12", steps=_steps(["称豆20g粗磨", "注入240g热水", "搅拌3次", "盖盖浸泡4分钟", "缓慢下压"])),
-        BrewRecipe(user_id=users[0].id, name="意式浓缩", device="意式咖啡机", water_temp=93, grind_size="极细", ratio="1:2", steps=_steps(["称豆18g填压", "萃取36g浓缩", "萃取时间25-30秒"])),
+        BrewRecipe(user_id=users[0].id, bean_id=beans[0].id, name="V60 经典手冲", device="V60", water_temp=92, grind_size="中细（细砂糖）", ratio="1:15", steps=_steps(["称豆15g研磨", "注水30g闷蒸30s", "注水至120g", "注水至225g", "等待滴完"])),
+        BrewRecipe(user_id=users[1].id, bean_id=beans[1].id, name="法压壶浸泡", device="法压壶", water_temp=94, grind_size="粗研磨", ratio="1:12", steps=_steps(["称豆20g粗磨", "注入240g热水", "搅拌3次", "盖盖浸泡4分钟", "缓慢下压"])),
+        BrewRecipe(user_id=users[0].id, bean_id=beans[5].id, name="意式浓缩", device="意式咖啡机", water_temp=93, grind_size="极细", ratio="1:2", steps=_steps(["称豆18g填压", "萃取36g浓缩", "萃取时间25-30秒"])),
     ]
 
 

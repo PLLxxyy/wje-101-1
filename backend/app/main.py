@@ -10,6 +10,7 @@ from app.middlewares.auth import auth_middleware
 from app.middlewares.error_handler import register_exception_handlers
 from app.middlewares.logger import logger_middleware
 from app.routes import auth, bean, comment, note, recipe, user
+from app.utils.migrations import run_migrations
 from app.utils.seed_data import seed_database
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -19,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await run_migrations(engine)
     async with AsyncSessionLocal() as session:
         await seed_database(session)
     yield
