@@ -12,6 +12,7 @@ class BrewRecipe(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    bean_id: Mapped[int | None] = mapped_column(ForeignKey("coffee_beans.id", ondelete="SET NULL"), index=True)
     name: Mapped[str] = mapped_column(String(100), index=True)
     device: Mapped[str] = mapped_column(String(50), index=True)
     water_temp: Mapped[float] = mapped_column(Float)
@@ -21,5 +22,6 @@ class BrewRecipe(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="recipes")
+    bean = relationship("CoffeeBean")
     notes = relationship("TastingNote", back_populates="brew_recipe")
 

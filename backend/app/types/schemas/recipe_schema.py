@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.types.schemas.bean_schema import BeanOut
 from app.types.schemas.user_schema import UserPublic
 
 
@@ -31,6 +32,8 @@ class RecipeBase(BaseModel):
 class RecipeCreate(RecipeBase):
     model_config = ConfigDict(extra="forbid")
 
+    bean_id: int | None = Field(default=None, ge=1)
+
 
 class RecipeUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
@@ -39,6 +42,7 @@ class RecipeUpdate(BaseModel):
     grind_size: str | None = Field(default=None, min_length=1, max_length=50)
     ratio: str | None = Field(default=None, min_length=3, max_length=20)
     steps: list[BrewStep] | None = Field(default=None, min_length=1, max_length=20)
+    bean_id: int | None = Field(default=None, ge=1)
 
 
 class RecipeOut(RecipeBase):
@@ -46,5 +50,7 @@ class RecipeOut(RecipeBase):
 
     id: int
     user_id: int
+    bean_id: int | None = None
     created_at: datetime
     user: UserPublic | None = None
+    bean: BeanOut | None = None

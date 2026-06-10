@@ -27,6 +27,11 @@
         <div>
           <h2>{{ recipe.name }}</h2>
           <p class="subtle">{{ recipe.device }} · {{ recipe.water_temp }}℃ · {{ recipe.grind_size }} · {{ recipe.ratio }}</p>
+          <p v-if="recipe.bean" class="bean-info">
+            <span class="bean-name">{{ recipe.bean.name }}</span>
+            <span class="subtle">{{ recipe.bean.origin }} · {{ processMethodLabel[recipe.bean.process_method] }}</span>
+          </p>
+          <FlavorTags v-if="recipe.bean && recipe.bean.flavor_tags.length" :tags="recipe.bean.flavor_tags" />
           <p>创建者：{{ recipe.user?.username || "咖啡同好" }}</p>
         </div>
         <div class="recipe-actions">
@@ -40,6 +45,17 @@
     <el-dialog v-model="detailVisible" title="配方步骤" width="620px">
       <template v-if="selectedRecipe">
         <h2>{{ selectedRecipe.name }}</h2>
+        <p class="subtle">{{ selectedRecipe.device }} · {{ selectedRecipe.water_temp }}℃ · {{ selectedRecipe.grind_size }} · {{ selectedRecipe.ratio }}</p>
+        <div v-if="selectedRecipe.bean" class="bean-block">
+          <h3 class="bean-block-title">关联豆种</h3>
+          <p>
+            <span class="bean-name">{{ selectedRecipe.bean.name }}</span>
+            <span class="subtle">{{ selectedRecipe.bean.origin }} · {{ processMethodLabel[selectedRecipe.bean.process_method] }}</span>
+          </p>
+          <FlavorTags v-if="selectedRecipe.bean.flavor_tags.length" :tags="selectedRecipe.bean.flavor_tags" />
+          <p class="bean-desc">{{ selectedRecipe.bean.description }}</p>
+        </div>
+        <h3>冲煮步骤</h3>
         <ol class="step-list">
           <li v-for="step in selectedRecipe.steps" :key="step.step_number">
             <b>{{ step.step_number }}.</b> {{ step.description }}（{{ step.duration_seconds }}秒）
@@ -53,6 +69,16 @@
         <div class="recipe-form-grid">
           <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
           <el-form-item label="器具"><el-input v-model="form.device" /></el-form-item>
+          <el-form-item label="关联豆种">
+            <el-select v-model="form.bean_id" clearable placeholder="可选择关联的豆种" class="full-width">
+              <el-option
+                v-for="bean in beans"
+                :key="bean.id"
+                :label="`${bean.name} · ${bean.origin}`"
+                :value="bean.id"
+              />
+            </el-select>
+          </el-form-item>
           <el-form-item label="水温"><el-input-number v-model="form.water_temp" :min="60" :max="100" /></el-form-item>
           <el-form-item label="研磨度"><el-input v-model="form.grind_size" /></el-form-item>
           <el-form-item label="粉水比"><el-input v-model="form.ratio" /></el-form-item>
@@ -78,13 +104,18 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { BookOpen, Filter, Pencil, Plus, Trash2 } from "lucide-vue-next";
 import { computed, onMounted, reactive, ref } from "vue";
 
+import { listBeans } from "@/api/bean";
 import { createRecipe, deleteRecipe, listRecipes, updateRecipe } from "@/api/recipe";
 import EmptyState from "@/components/common/EmptyState.vue";
+import FlavorTags from "@/components/common/FlavorTags.vue";
 import { useUserStore } from "@/stores/useUserStore";
+import { processMethodLabel } from "@/types/enums";
+import type { CoffeeBean } from "@/types/bean";
 import type { BrewRecipe, BrewStep, RecipePayload } from "@/types/recipe";
 
 const userStore = useUserStore();
 const recipes = ref<BrewRecipe[]>([]);
+const beans = ref<CoffeeBean[]>([]);
 const selectedRecipe = ref<BrewRecipe | null>(null);
 const dialogVisible = ref(false);
 const editingId = ref<number | null>(null);
@@ -104,7 +135,9 @@ const detailVisible = computed({
   }
 });
 
-onMounted(fetchRecipes);
+onMounted(async () => {
+  await Promise.all([fetchRecipes(), fetchBeans()]);
+});
 
 async function fetchRecipes(): Promise<void> {
   recipes.value = await listRecipes({
@@ -113,6 +146,10 @@ async function fetchRecipes(): Promise<void> {
     temp_min: filters.temp_min,
     temp_max: filters.temp_max
   });
+}
+
+async function fetchBeans(): Promise<void> {
+  beans.value = await listBeans();
 }
 
 function openCreate(): void {
@@ -154,12 +191,13 @@ function canModify(recipe: BrewRecipe): boolean {
   return Boolean(userStore.currentUser && (recipe.user_id === userStore.currentUser.id || userStore.isAdmin));
 }
 
-function copyRecipe(recipe: RecipePayload): void {
+function copyRecipe(recipe: RecipePayload | BrewRecipe): void {
   form.name = recipe.name;
   form.device = recipe.device;
   form.water_temp = recipe.water_temp;
   form.grind_size = recipe.grind_size;
   form.ratio = recipe.ratio;
+  form.bean_id = recipe.bean_id;
   form.steps = recipe.steps.map((step) => ({
     step_number: step.step_number,
     description: step.description,
@@ -174,6 +212,7 @@ function emptyRecipe(): RecipePayload {
     water_temp: 92,
     grind_size: "中细",
     ratio: "1:15",
+    bean_id: null,
     steps: [{ step_number: 1, description: "闷蒸并分段注水", duration_seconds: 30 }]
   };
 }
@@ -225,6 +264,38 @@ function emptyRecipe(): RecipePayload {
   margin: 0 0 8px;
 }
 
+.bean-info {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.bean-name {
+  font-weight: 600;
+}
+
+.bean-block {
+  padding: 14px 16px;
+  margin: 14px 0;
+  background: var(--panel);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.bean-block-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.bean-block .bean-desc {
+  margin-top: 8px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
 .recipe-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -239,6 +310,10 @@ function emptyRecipe(): RecipePayload {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.full-width {
+  width: 100%;
 }
 
 .step-editor {

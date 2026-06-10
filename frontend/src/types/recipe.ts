@@ -1,3 +1,4 @@
+import type { CoffeeBean } from "./bean";
 import type { User } from "./user";
 
 export interface BrewStep {
@@ -9,6 +10,7 @@ export interface BrewStep {
 export interface BrewRecipe {
   id: number;
   user_id: number;
+  bean_id: number | null;
   name: string;
   device: string;
   water_temp: number;
@@ -17,6 +19,7 @@ export interface BrewRecipe {
   steps: BrewStep[];
   created_at: string;
   user: User | null;
+  bean: CoffeeBean | null;
 }
 
 export interface RecipePayload {
@@ -26,5 +29,6 @@ export interface RecipePayload {
   grind_size: string;
   ratio: string;
   steps: BrewStep[];
+  bean_id: number | null;
 }
 

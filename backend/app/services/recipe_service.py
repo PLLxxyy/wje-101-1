@@ -16,7 +16,10 @@ async def list_recipes(
     search: str | None = None,
     user_id: int | None = None,
 ) -> list[RecipeOut]:
-    statement = select(BrewRecipe).options(selectinload(BrewRecipe.user))
+    statement = select(BrewRecipe).options(
+        selectinload(BrewRecipe.user),
+        selectinload(BrewRecipe.bean),
+    )
     if device:
         statement = statement.where(BrewRecipe.device.ilike(f"%{device}%"))
     if temp_min is not None:
@@ -32,7 +35,10 @@ async def list_recipes(
 
 
 async def get_recipe(session: AsyncSession, recipe_id: int) -> RecipeOut | None:
-    statement = select(BrewRecipe).options(selectinload(BrewRecipe.user)).where(BrewRecipe.id == recipe_id)
+    statement = select(BrewRecipe).options(
+        selectinload(BrewRecipe.user),
+        selectinload(BrewRecipe.bean),
+    ).where(BrewRecipe.id == recipe_id)
     result = await session.execute(statement)
     recipe = result.scalar_one_or_none()
     return RecipeOut.model_validate(recipe) if recipe else None
@@ -43,7 +49,10 @@ async def create_recipe(session: AsyncSession, payload: RecipeCreate, user_id: i
     recipe = BrewRecipe(user_id=user_id, **data)
     session.add(recipe)
     await session.commit()
-    statement = select(BrewRecipe).options(selectinload(BrewRecipe.user)).where(BrewRecipe.id == recipe.id)
+    statement = select(BrewRecipe).options(
+        selectinload(BrewRecipe.user),
+        selectinload(BrewRecipe.bean),
+    ).where(BrewRecipe.id == recipe.id)
     result = await session.execute(statement)
     return RecipeOut.model_validate(result.scalar_one())
 

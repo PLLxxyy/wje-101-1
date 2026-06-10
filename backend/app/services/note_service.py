@@ -109,7 +109,10 @@ def _note_conditions(roast_level: str | None, origin: str | None, user_id: int |
 def _note_query():
     return select(TastingNote).options(
         selectinload(TastingNote.user),
-        selectinload(TastingNote.brew_recipe).selectinload(BrewRecipe.user),
+        selectinload(TastingNote.brew_recipe).options(
+            selectinload(BrewRecipe.user),
+            selectinload(BrewRecipe.bean),
+        ),
     )
 
 
